@@ -86,50 +86,34 @@ def obtener_id_categoria_general():
 
 def agregar_subcategoria():
     while True:
+
         clear()
-        
         separador()
-        
         print("# Subcategoría:")
         print("# Presiona enter para no elegir una categoría.")
-        
         separador()
         
         subcategoria = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
 
-        if subcategoria == "":
-            # Solo se retorna el ID de la subcategoría "General"
-            return obtener_id_subcategoria_general()
-
-        else:
-
-            # Bucle de Confirmación.#
-
-            while True:
-                clear()
-                
-                separador()
-
-                print(f"# La subcategoría '{subcategoria}' no existe. ¿Deseas agregarla?")
-                print("y/n")
-
-                separador()
-
-                respuesta = input(">> ").strip().upper() # Quita los espacios y convierte el texto a mayúsculas.
-                
-                if respuesta == "Y":
-                    # Se inserta una nueva subcategoría y se cierra la selección de subcategoría. Retorna su id .
-                    id_nueva_subcategoria = ejecutar_sql(
-                        "INSERT INTO subcategorias (nombre) VALUES (?)",
-                        (subcategoria,)
-                    )
-                    return id_nueva_subcategoria
-                elif respuesta == "N":
-                    break
-                else:
-                    print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
-                    cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
-
+        # Si el usuario no ingresa nada, devuelve "General".
+        if not subcategoria: # Porque un string vacío es "sinónimo" de False.
+            return "General"
+        
+        # Si la subcategoría no existe, pregunta si desea añadirla.
+        else:     
+            respuesta = input(f"'{subcategoria}' no existe, desea agregarla? (y/n)").strip().upper()
+            
+            if respuesta == "Y":
+                return subcategoria
+            if respuesta == "N":
+                continue # Vuelve a pedir una subcategoría.
+            else: # Imprime un mensaje, hace una espera visual de tres segundos y vuelve pedir una subcategoría.
+                print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
+                cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
+                continue
+            
+        
+        
 ###################################
 # Funcion para agregar categorías #
 ###################################
@@ -229,7 +213,7 @@ def agregar_contenido_del_texto():
 def crear_nota():
     agregar_contenido_del_texto()
     agregar_subcategoria()
-    
+
 
 
 
