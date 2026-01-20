@@ -1,4 +1,5 @@
-from clear_screen import clear 
+import time
+from utilidades import clear, separador, cuenta_regresiva 
 
 # Creación de tablas (por única vez como se lo asignó luego de importar el módulo)
 
@@ -57,14 +58,6 @@ def main():
     """)
 
 
-
-###################################
-# Funcion para imprimir separador #
-###################################
-
-def separador():
-    print("/" , "#" * 18 , "/")
-
 ####################################
 ##### Funcion para obtener ids #####
 ####################################
@@ -84,21 +77,49 @@ def obtener_id_subcategoria_general():
 
 def crear_subcategoria():
     while True:
+        clear()
+        
         separador()
+        
         print("# Subcategoría:")
-        subcategoria = input(">>")
+        print("# Presiona enter para no elegir una categoría.")
+        
+        separador()
+        
+        subcategoria = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
 
         if subcategoria == "":
             # Solo se retorna el ID de la subcategoría "General"
             return obtener_id_subcategoria_general()
 
         else:
-            # Se inserta una nueva subcategoría
-            id_nueva_subcategoria = ejecutar_sql(
-                "INSERT INTO subcategorias (titulo) VALUES (?)",
-                (subcategoria,)
-            )
-            return id_nueva_subcategoria
+
+            # Bucle de Confirmación.#
+
+            while True:
+                clear()
+                
+                separador()
+
+                print(f"# La subcategoría '{subcategoria}' no existe. ¿Deseas agregarla?")
+                print("y/n")
+
+                separador()
+
+                respuesta = input(">> ").strip().upper() # Quita los espacios y convierte el texto a mayúsculas.
+                
+                if respuesta == "Y":
+                    # Se inserta una nueva subcategoría y se cierra la selección de subcategoría. Retorna su id .
+                    id_nueva_subcategoria = ejecutar_sql(
+                        "INSERT INTO subcategorias (titulo) VALUES (?)",
+                        (subcategoria,)
+                    )
+                    return id_nueva_subcategoria
+                elif respuesta == "N":
+                    break
+                else:
+                    print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
+                    time.sleep(3) # Pausa 2 segundos antes de volver a borrar la pantalla.
 
 #################################
 # Funcion para crear categorías #
