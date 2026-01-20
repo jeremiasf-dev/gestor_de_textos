@@ -197,16 +197,14 @@ def agregar_titulo():
     
     separador()
     
-    # Input del usuario        
-    titulo = input(">> ").strip()
-    
-    # Si el usuario aprieta enter, la nota pasa a llamarse "Sin titulo".
-    if titulo == "":
-        titulo = "Sin titulo"
-
-    # Inserta el título en la tabla textos en el atributo titulo
+    # Input del usuario, si aprieta enter, la nota pasa a llamarse "Sin titulo".      
+    # Esta forma es muy interesante, porque es como python maneja algunas cosas.
+    # Los "or" devuelven primero el valor verdadero.
+    # En python, hay "sinonimos" de "False": "" , 0 , NONE , () , [] , []
+    # Por ende, si el usuario ingresa algo, ese algo se guarda en la variable,
+    # y, si no ingresa nada, pasa a valer el próximo valor verdadero: "Sin título"
+    titulo = input(">> ").strip() or "Sin titulo"
     ejecutar_sql("INSERT INTO textos (titulo) VALUES (?)", (titulo,))
-
 
 # def agregar_texto():
 # Se inicializan las funciones
