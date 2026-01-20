@@ -22,9 +22,13 @@ def ejecutar_sql(sql, parametros=None):
         cursor.execute(sql, parametros)
     else:
         cursor.execute(sql)
+
+    last_id = cursor.lastrowid
+
     conn.commit() # Hace commit si subo INSERT/UPDATE/DELETE/CREATE
     conn.close()  # Cierra la conexión con la base de datos
 
+    return last_id # Devuelve el id generado si es que lo hubo
 
 # Función para ejecutar SELECT y devolver resultados
 def leer_sql(sql, parametros=None):
