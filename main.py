@@ -1,4 +1,3 @@
-import time
 from utilidades import clear, separador, cuenta_regresiva 
 
 # Creación de tablas (por única vez como se lo asignó luego de importar el módulo)
@@ -9,8 +8,8 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS subcategorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT NOT NULL DEFAULT "General"
-            CHECK (length(titulo) <= 20)
+        nombre TEXT NOT NULL DEFAULT "General"
+            CHECK (length(nombre) <= 20)
             )
     """)
 
@@ -19,8 +18,8 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS categorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT NOT NULL DEFAULT "General"
-            CHECK (length(titulo) <= 20),
+        nombre TEXT NOT NULL DEFAULT "General"
+            CHECK (length(nombre) <= 20),
         subcategoria_id INTEGER NOT NULL,
         FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)     
         )
@@ -31,7 +30,7 @@ def main():
     ejecutar_sql("""
         CREATE TABLE IF NOT EXISTS textos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT NOT NULL DEFAULT "Nota"
+        titulo TEXT NOT NULL
             CHECK (length(titulo) <= 50),
         contenido TEXT NOT NULL,
         categoria_id INTEGER NOT NULL,
@@ -40,21 +39,21 @@ def main():
     """)
 
 # Creación de valores por defecto.
-## Subcategoría
+## Subcategoría "General"
     ejecutar_sql("""
-    INSERT INTO subcategorias (titulo)
+    INSERT INTO subcategorias (nombre)
     SELECT 'General'
     WHERE NOT EXISTS (
-        SELECT 1 FROM subcategorias WHERE titulo = 'General')
+        SELECT 1 FROM subcategorias WHERE nombre = 'General')
     """
     )
-## Categoría
+## Categoría "General"
     ejecutar_sql("""
-    INSERT INTO categorias (titulo, subcategoria_id)
+    INSERT INTO categorias (nombre, subcategoria_id)
     SELECT 'General', id
     FROM subcategorias
     WHERE NOT EXISTS (
-        SELECT 1 FROM categorias WHERE titulo = 'General')
+        SELECT 1 FROM categorias WHERE nombre = 'General')
     """)
 
 
@@ -66,10 +65,20 @@ def main():
 def obtener_id_subcategoria_general():
 
     tuplas = leer_sql(
-        "SELECT id FROM subcategorias WHERE titulo = 'General'"
+        "SELECT id FROM subcategorias WHERE nombre = 'General'"
     )
 
     return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
+
+# Categoría "General"
+def obtener_id_categoria_general():
+
+    tuplas = leer_sql(
+        "SELECT id FROM categorias WHERE nombre = 'General'"
+    )
+
+    return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
+
 
 ####################################
 # Funcion para crear subcategorías #
@@ -111,7 +120,7 @@ def crear_subcategoria():
                 if respuesta == "Y":
                     # Se inserta una nueva subcategoría y se cierra la selección de subcategoría. Retorna su id .
                     id_nueva_subcategoria = ejecutar_sql(
-                        "INSERT INTO subcategorias (titulo) VALUES (?)",
+                        "INSERT INTO subcategorias (nombre) VALUES (?)",
                         (subcategoria,)
                     )
                     return id_nueva_subcategoria
@@ -119,41 +128,88 @@ def crear_subcategoria():
                     break
                 else:
                     print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
-                    time.sleep(3) # Pausa 2 segundos antes de volver a borrar la pantalla.
+                    cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
 
 #################################
 # Funcion para crear categorías #
 #################################
 
-def crear_categoria():
+def crear_subcategoria():
+
     while True:
 
         clear()
-        separador()                
+        
+        separador()
+        
+        print("# Categoría:")
+        print("# Presiona enter para no elegir una categoría.")
+        
+        separador()
+        
+        categoria = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
 
-        # Se determina la subcategoría
-        subcategoria_id = crear_subcategoria()
-
-        print(" Categoría:")
-        categoria = input(">> ")        
-
-        # Si el usuario no ingresó nombre, se usa "General"
         if categoria == "":
-            categoria = "General"
-        # Se inserta la categoría con su correspondiente subcategoría
-        ejecutar_sql(
-            "INSERT INTO categorias (titulo, subcategoria_id) VALUES (?, ?)",
-            (categoria, subcategoria_id)
-        )
-        break
+            # Solo se retorna el ID de la subcategoría "General"
+            return obtener_id_categoria_general()
 
+        else:
+
+            # Bucle de Confirmación.#
+
+            while True:
+                clear()
+                
+                separador()
+
+                print(f"# La categoría '{categoria}' no existe. ¿Deseas agregarla?")
+                print("y/n")
+
+                separador()
+
+                respuesta = input(">> ").strip().upper() # Quita los espacios y convierte el texto a mayúsculas.
+                
+                if respuesta == "Y":
+                    # Se inserta una nueva subcategoría y se cierra la selección de subcategoría. Retorna su id .
+                    id_nueva_categoria = ejecutar_sql(
+                        "INSERT INTO categorias (nombre) VALUES (?)",
+                        (categoria,)
+                    )
+                    return id_nueva_subcategoria
+                elif respuesta == "N":
+                    break
+                else:
+                    print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
+                    cuenta_regresiva() # Pausa 3 segundos antes de reiniciar el bucle.
 
 #################################
 #### Funciones para el texto ####
 #################################
 
+def agregar_titulo():
+
+    clear()
+    
+    separador()
+    
+    print("# Título:")
+    print("# Presiona enter para no elegir un título.")
+    
+    separador()
+    
+    # Input del usuario        
+    titulo = input(">> ").strip()
+    
+    # Si el usuario aprieta enter, la nota pasa a llamarse "Sin titulo".
+    if titulo == "":
+        titulo = "Sin titulo"
+
+    # Inserta el título en la tabla textos en el atributo titulo
+    ejecutar_sql("INSERT INTO textos (titulo) VALUES (?)", (titulo,))
+
+
+# def agregar_texto():
 # Se inicializan las funciones
-main()
 
 # Bucle del programa
 
