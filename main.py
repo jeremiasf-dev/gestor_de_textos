@@ -80,11 +80,11 @@ def obtener_id_categoria_general():
     return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
 
 
-####################################
-# Funcion para crear subcategorías #
-####################################
+######################################
+# Funcion para agregar subcategorías #
+######################################
 
-def crear_subcategoria():
+def agregar_subcategoria():
     while True:
         clear()
         
@@ -130,11 +130,11 @@ def crear_subcategoria():
                     print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
                     cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
 
-#################################
-# Funcion para crear categorías #
-#################################
+###################################
+# Funcion para agregar categorías #
+###################################
 
-def crear_subcategoria():
+def agregar_subcategoria():
 
     while True:
 
@@ -182,9 +182,9 @@ def crear_subcategoria():
                     print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
                     cuenta_regresiva() # Pausa 3 segundos antes de reiniciar el bucle.
 
-#################################
-#### Funciones para el texto ####
-#################################
+##################################################
+#### Funcion para agregar el título del texto ####
+##################################################
 
 def agregar_titulo():
 
@@ -206,9 +206,36 @@ def agregar_titulo():
     titulo = input(">> ").strip() or "Sin titulo"
     ejecutar_sql("INSERT INTO textos (titulo) VALUES (?)", (titulo,))
 
-# def agregar_texto():
-# Se inicializan las funciones
+################################################
+# Funcion para agregar el contenido del texto. #
+################################################
+
+def agregar_contenido_del_texto():
+
+    clear()
+
+    print("# Nota:")
+
+    print()
+
+    texto = input("").strip() or "Sin contenido"
+    ejecutar_sql("INSERT INTO textos (texto) VALUES (?)", (texto,))
+
+    separador()
+
+####################################
+# Función para crear el texto/nota #
+####################################
+def crear_nota():
+    agregar_contenido_del_texto()
+    agregar_subcategoria()
+    
+
+
 
 # Bucle del programa
+
+main()
+crear_nota()
 
 # Próximanente
