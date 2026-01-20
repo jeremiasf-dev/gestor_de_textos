@@ -1,3 +1,4 @@
+from db import ejecutar_sql, leer_sql
 from utilidades import clear, separador, cuenta_regresiva 
 
 # Creación de tablas (por única vez como se lo asignó luego de importar el módulo)
@@ -79,92 +80,44 @@ def obtener_id_categoria_general():
 
     return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
 
+        
+###########################################
+# Funcion general para agregar categorías #
+###########################################
 
-######################################
-# Funcion para agregar subcategorías #
-######################################
+def agregar_categoria(tipo):
 
-def agregar_subcategoria():
+    nombres = {0: "Categoría", 1: "Subcategoría"}
+    tipo_nombre = nombres[tipo]
+
     while True:
 
         clear()
+        
         separador()
-        print("# Subcategoría:")
-        print("# Presiona enter para no elegir una categoría.")
+        print(f" {tipo_nombre}: ")
+        print("# Presiona enter para no elegir una.")
         separador()
         
-        subcategoria = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
+        # Devuelve un item del diccionario.
+        item = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
 
         # Si el usuario no ingresa nada, devuelve "General".
-        if not subcategoria: # Porque un string vacío es "sinónimo" de False.
+        if not item: # Porque un string vacío es "sinónimo" de False.
             return "General"
         
-        # Si la subcategoría no existe, pregunta si desea añadirla.
+        # Si no existe, pregunta si desea añadirla.
         else:     
-            respuesta = input(f"'{subcategoria}' no existe, desea agregarla? (y/n)").strip().upper()
+            respuesta = input(f"'{tipo_nombre}' no existe, desea agregarla? (y/n)").strip().upper()
             
             if respuesta == "Y":
-                return subcategoria
+                return item
             if respuesta == "N":
-                continue # Vuelve a pedir una subcategoría.
-            else: # Imprime un mensaje, hace una espera visual de tres segundos y vuelve pedir una subcategoría.
+                continue # Vuelve a pedir una categoria.
+            else: # Imprime un mensaje, hace una espera visual de tres segundos y vuelve pedir una categoria.
                 print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
                 cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
                 continue
-            
-        
-        
-###################################
-# Funcion para agregar categorías #
-###################################
-
-def agregar_subcategoria():
-
-    while True:
-
-        clear()
-        
-        separador()
-        
-        print("# Categoría:")
-        print("# Presiona enter para no elegir una categoría.")
-        
-        separador()
-        
-        categoria = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
-
-        if categoria == "":
-            # Solo se retorna el ID de la subcategoría "General"
-            return obtener_id_categoria_general()
-
-        else:
-
-            # Bucle de Confirmación.#
-
-            while True:
-                clear()
-                
-                separador()
-
-                print(f"# La categoría '{categoria}' no existe. ¿Deseas agregarla?")
-                print("y/n")
-
-                separador()
-
-                respuesta = input(">> ").strip().upper() # Quita los espacios y convierte el texto a mayúsculas.
-                
-                if respuesta == "Y":
-                    # Se inserta una nueva subcategoría y se cierra la selección de subcategoría. Retorna su id .
-                    id_nueva_categoria = ejecutar_sql(
-                        "INSERT INTO categorias (nombre) VALUES (?)",
-                        (categoria,)
-                    )
-                    return id_nueva_subcategoria
-                elif respuesta == "N":
-                    break
-                else:
-                    print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
-                    cuenta_regresiva() # Pausa 3 segundos antes de reiniciar el bucle.
 
 ##################################################
 #### Funcion para agregar el título del texto ####
@@ -173,12 +126,9 @@ def agregar_subcategoria():
 def agregar_titulo():
 
     clear()
-    
     separador()
-    
     print("# Título:")
     print("# Presiona enter para no elegir un título.")
-    
     separador()
     
     # Input del usuario, si aprieta enter, la nota pasa a llamarse "Sin titulo".      
@@ -187,8 +137,8 @@ def agregar_titulo():
     # En python, hay "sinonimos" de "False": "" , 0 , NONE , () , [] , []
     # Por ende, si el usuario ingresa algo, ese algo se guarda en la variable,
     # y, si no ingresa nada, pasa a valer el próximo valor verdadero: "Sin título"
-    titulo = input(">> ").strip() or "Sin titulo"
-    ejecutar_sql("INSERT INTO textos (titulo) VALUES (?)", (titulo,))
+    titulo = input(">> ").strip() or "Sin título"
+    return titulo
 
 ################################################
 # Funcion para agregar el contenido del texto. #
@@ -197,25 +147,49 @@ def agregar_titulo():
 def agregar_contenido_del_texto():
 
     clear()
-
     print("# Nota:")
-
     print()
 
-    texto = input("").strip() or "Sin contenido"
-    ejecutar_sql("INSERT INTO textos (texto) VALUES (?)", (texto,))
-
-    separador()
+    contenido = input("").strip() or "Sin contenido"
+    return contenido
 
 ####################################
 # Función para crear el texto/nota #
 ####################################
 def crear_nota():
-    agregar_contenido_del_texto()
-    agregar_subcategoria()
+    
+    # Comienza pidiendo el contenido del texto, luego el título, la subcategoría y la categoría.
+    contenido = agregar_contenido_del_texto()
+    titulo = agregar_titulo()    
 
+    nombre_subcategoria = agregar_categoria(0)
+    nombre_categoria = agregar_categoria(1)
+    
+    if nombre_subcategoria == "General":
+        subcategoria_id = obtener_id_subcategoria_subgeneral()
+    else:
+        # Inserto la subcategoría en caso de no existir y capturo su id
+        subcategoria_id = ejecutar_sql(
+            "INSERT INTO subcategorias (nombre) VALUES (?)",
+            (nombre_subcategoria, )
+        )
+    if nombre_categoria == "General" :
+        categoria_id = obtener_id_categoria_general()
+    else:
+        # Inserto la nueva categoría si no existe y capturo su id
+        categoria_id = ejecutar_sql(
+            "INSERT INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
+            (nombre_categoria, subcategoria_id)
+        )
 
-
+    # Inserto la nota en la tabla textos
+    ejecutar_sql(
+        "INSERT INTO textos (titulo, contenido, categoria_id) VALUES (?, ?, ?)",
+        (titulo, contenido, categoria_id)
+    )
+    clear()
+    separador()
+    print("Nota creada con éxito.")
 
 # Bucle del programa
 

@@ -3,6 +3,8 @@
 
 import sqlite3
 
+DB_NAME = "textos"
+
 # Función para conectarse a la base de datos
 def conectar():
     """
