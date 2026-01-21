@@ -9,7 +9,7 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS subcategorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL DEFAULT "General"
+        nombre TEXT NOT NULL DEFAULT "GENERAL"
             CHECK (length(nombre) <= 20)
             )
     """)
@@ -19,10 +19,10 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS categorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL DEFAULT "General"
+        nombre TEXT NOT NULL DEFAULT "GENERAL"
             CHECK (length(nombre) <= 20),
         subcategoria_id INTEGER NOT NULL,
-        FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)     
+        FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)
         )
     """)
 
@@ -43,18 +43,18 @@ def main():
 ## Subcategoría "General"
     ejecutar_sql("""
     INSERT INTO subcategorias (nombre)
-    SELECT 'General'
+    SELECT 'GENERAL'
     WHERE NOT EXISTS (
-        SELECT 1 FROM subcategorias WHERE nombre = 'General')
+        SELECT 1 FROM subcategorias WHERE nombre = 'GENERAL')
     """
     )
 ## Categoría "General"
     ejecutar_sql("""
     INSERT INTO categorias (nombre, subcategoria_id)
-    SELECT 'General', id
+    SELECT 'GENERAL', id
     FROM subcategorias
     WHERE NOT EXISTS (
-        SELECT 1 FROM categorias WHERE nombre = 'General')
+        SELECT 1 FROM categorias WHERE nombre = 'GENERAL')
     """)
 
 
@@ -66,21 +66,21 @@ def main():
 def obtener_id_subcategoria_general():
 
     tuplas = leer_sql(
-        "SELECT id FROM subcategorias WHERE nombre = 'General'"
+        "SELECT id FROM subcategorias WHERE nombre = 'GENERAL'"
     )
 
-    return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
+    return tuplas[0][0] # Devuelve una lista de tuplas. El primer índice accede a la tupla, el segundo, al atributo.
 
 # Categoría "General"
 def obtener_id_categoria_general():
 
     tuplas = leer_sql(
-        "SELECT id FROM categorias WHERE nombre = 'General'"
+        "SELECT id FROM categorias WHERE nombre = 'GENERAL'"
     )
 
-    return tuplas[0][0] # Devuelve la primer posición de cada atributo de la entidad
+    return tuplas[0][0]
 
-        
+
 ###########################################
 # Funcion general para agregar categorías #
 ###########################################
@@ -93,28 +93,26 @@ def agregar_categoria(tipo):
     while True:
 
         clear()
-        
-        separador()
         print(f" {tipo_nombre}: ")
-        print("# Presiona enter para no elegir una.")
-        separador()
-        
-        # Devuelve un item del diccionario.
-        item = input(">> ").strip() # .strip() sanitiza los espacios al principio y al final del input.
+        print("# Presiona enter para categoría por defecto.")
+
+        # Ingresa el nombre de la categoría.
+        item = input(">> ").strip().upper # .strip() sanitiza los espacios al principio y al final del input. Se recibe el string en mayúsculas para normalizar nombres de categorías.
 
         # Si el usuario no ingresa nada, devuelve "General".
         if not item: # Porque un string vacío es "sinónimo" de False.
-            return "General"
-        
+            return "GENERAL"
+
         # Si no existe, pregunta si desea añadirla.
-        else:     
-            respuesta = input(f"'{tipo_nombre}' no existe, desea agregarla? (y/n)").strip().upper()
-            
+        else:
+            respuesta = input(f"'{tipo_nombre}' no existe, desea agregarla? (y/n) \n>> ").strip().upper()
+
             if respuesta == "Y":
                 return item
             if respuesta == "N":
                 continue # Vuelve a pedir una categoria.
             else: # Imprime un mensaje, hace una espera visual de tres segundos y vuelve pedir una categoria.
+		clear()
                 print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
                 cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
                 continue
@@ -126,12 +124,9 @@ def agregar_categoria(tipo):
 def agregar_titulo():
 
     clear()
-    separador()
     print("# Título:")
-    print("# Presiona enter para no elegir un título.")
-    separador()
-    
-    # Input del usuario, si aprieta enter, la nota pasa a llamarse "Sin titulo".      
+
+    # Input del usuario, si aprieta enter, la nota pasa a llamarse "Sin titulo". 
     # Esta forma es muy interesante, porque es como python maneja algunas cosas.
     # Los "or" devuelven primero el valor verdadero.
     # En python, hay "sinonimos" de "False": "" , 0 , NONE , () , [] , []
@@ -147,8 +142,7 @@ def agregar_titulo():
 def agregar_contenido_del_texto():
 
     clear()
-    print("# Nota:")
-    print()
+    print("# Nota:"\n)
 
     contenido = input("").strip() or "Sin contenido"
     return contenido
@@ -157,27 +151,30 @@ def agregar_contenido_del_texto():
 # Función para crear el texto/nota #
 ####################################
 def crear_nota():
-    
+
     # Comienza pidiendo el contenido del texto, luego el título, la subcategoría y la categoría.
     contenido = agregar_contenido_del_texto()
-    titulo = agregar_titulo()    
+    titulo = agregar_titulo()
 
-    nombre_subcategoria = agregar_categoria(0)
-    nombre_categoria = agregar_categoria(1)
-    
-    if nombre_subcategoria == "General":
+    nombre_subcategoria = agregar_categoria(0) # 0 = key de subcategoria
+    nombre_categoria = agregar_categoria(1)    # 1 = key de categoria
+
+    # Inserción de subcategoría
+
+    if nombre_subcategoria == "GENERAL" :
         subcategoria_id = obtener_id_subcategoria_general()
     else:
-        # Capturo su el id de la subcategoría a punto de ingresar
+        # Inserto
         ejecutar_sql(
             "INSERT INTO subcategorias (nombre) VALUES (?)",
             (nombre_subcategoria, )
         )
-        # Hago insert a través de su id.
-        
+
         subcategoria_id = leer_sql("SELECT id FROM subcategorias WHERE nombre = ?", (nombre_subcategoria,))[0][0]
 
-    if nombre_categoria == "General" :
+   # Inserción de categoría
+
+    if nombre_categoria == "GENERAL" :
         categoria_id = obtener_id_categoria_general()
     else:
         # Inserto la nueva categoría si no existe y capturo su id
@@ -193,9 +190,8 @@ def crear_nota():
         (titulo, contenido, categoria_id)
     )
     clear()
-    separador()
     print("Nota creada con éxito.")
-
+    cuenta_regresiva(2)
 
 ############################################################################
 # Funcion para buscar notas por coincidencia parcial en titulo y contenido #
@@ -321,8 +317,9 @@ try:
         elif opcion == 0:
             break
         else:
-            print("Error. Ingrese un número (0 incluído)")
+            print("Error. Ingrese una opción válida.")
             cuenta_regresiva()
+
 except(ValueError):
     print("Error, ingrese un numero entero.")
     cuenta_regresiva_dinamica()
