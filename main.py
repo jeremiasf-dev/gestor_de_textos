@@ -1,5 +1,5 @@
 from db import ejecutar_sql, leer_sql
-from utilidades import clear, separador, cuenta_regresiva 
+from utilidades import clear, separador, cuenta_regresiva, cuenta_regresiva_dinamica
 
 # Creación de tablas (por única vez como se lo asignó luego de importar el módulo)
 
@@ -87,7 +87,7 @@ def obtener_id_categoria_general():
 
 def agregar_categoria(tipo):
 
-    nombres = {0: "Categoría", 1: "Subcategoría"}
+    nombres = {0: "Subcategoría", 1: "Categoría"}
     tipo_nombre = nombres[tipo]
 
     while True:
@@ -166,21 +166,26 @@ def crear_nota():
     nombre_categoria = agregar_categoria(1)
     
     if nombre_subcategoria == "General":
-        subcategoria_id = obtener_id_subcategoria_subgeneral()
+        subcategoria_id = obtener_id_subcategoria_general()
     else:
-        # Inserto la subcategoría en caso de no existir y capturo su id
-        subcategoria_id = ejecutar_sql(
+        # Capturo su el id de la subcategoría a punto de ingresar
+        ejecutar_sql(
             "INSERT INTO subcategorias (nombre) VALUES (?)",
             (nombre_subcategoria, )
         )
+        # Hago insert a través de su id.
+        
+        subcategoria_id = leer_sql("SELECT id FROM subcategorias WHERE nombre = ?", (nombre_subcategoria,))[0][0]
+
     if nombre_categoria == "General" :
         categoria_id = obtener_id_categoria_general()
     else:
         # Inserto la nueva categoría si no existe y capturo su id
-        categoria_id = ejecutar_sql(
+        ejecutar_sql(
             "INSERT INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
             (nombre_categoria, subcategoria_id)
         )
+        categoria_id = leer_sql("SELECT id FROM categorias WHERE nombre = ?", (nombre_categoria))[0][0]
 
     # Inserto la nota en la tabla textos
     ejecutar_sql(
@@ -191,9 +196,135 @@ def crear_nota():
     separador()
     print("Nota creada con éxito.")
 
-# Bucle del programa
 
+############################################################################
+# Funcion para buscar notas por coincidencia parcial en titulo y contenido #
+############################################################################
+
+def buscar_notas(palabra):
+    # Agrega % al inicio y al final para coincidencia parcial
+    filtro = f"%{palabra}%"
+
+    notas = leer_sql("""
+        SELECT textos.titulo, textos.contenido, categorias.nombre AS categoria,
+        subcategorias.nombre AS subcategoria
+
+        FROM textos
+        
+        JOIN categorias ON textos.categoria_id = categorias.id
+        JOIN subcategorias ON categorias.subcategoria_id = subcategorias.id
+
+        -- Busqueda por coincidencia parcial
+
+        WHERE textos.titulo LIKE ? COLLATE NOCASE OR textos.contenido LIKE ?
+        ORDER BY textos.id
+    """, (filtro, filtro))
+
+    if not notas:
+        print(f"No se encontraron notas con '{palabra}'. intente con otra palabra.")
+        cuenta_regresiva()
+        return
+
+    for nota in notas:
+        titulo, contenido, categoria, subcategoria = nota
+        separador()
+        print(f"Título: {titulo}")
+        print(f"Categoría: {categoria}")
+        print(f"Subcategoría: {subcategoria}")
+        print(f"Contenido: {contenido}")
+        
+        separador()
+        print()
+
+
+
+########################################
+# Funcion para mostrar todas las notas #
+########################################
+
+def mostrar_notas():
+    # Trae todas las notas junto con la categoría asociada
+    notas = leer_sql("""
+        -- Proyecto todos los atributos salvo el id...
+        SELECT textos.titulo, textos.contenido, categorias.nombre AS categoria,
+        subcategorias.nombre AS subcategoria
+        
+        -- ...de la tabla textos.        
+        FROM textos
+        
+        -- Combino las categorias y subcategorias a la proyección (INNER JOIN solo devuelve tuplas que tienen coincidencias en todas las tablas unidas. )
+          
+        JOIN categorias ON textos.categoria_id = categorias.id
+        JOIN subcategorias ON categorias.subcategoria_id = subcategorias.id
+        
+        -- Ordeno de > id
+
+        ORDER BY textos.id
+    """)
+
+    if not notas:
+        print("Aún no existen notas.")
+        cuenta_regresiva()
+        return
+
+    for nota in notas:
+        titulo, contenido, categoria, subcategoria = nota
+        if nota:
+            separador()
+            print(f"Categoría: {categoria}.")
+            print(f"Subcategoría: {subcategoria}.")
+            separador()
+            print(f"\n{titulo}\n")
+            print(f"{contenido}")
+            separador()
+
+
+# Bucle del programa
+## Inicialización de la base de datos y carga de la categoría y subcategoría "General".
 main()
-crear_nota()
+debug = True
+# Menú interactivo
+try:
+    while True:
+    ## Sección debug
+        print("Datos en textos:")
+        print(leer_sql("SELECT * FROM textos"))
+        print()
+        print("Datos en categorias:")
+        print(leer_sql("SELECT * FROM categorias"))
+
+        while debug:
+            respuesta = input("Presione enter para continuar. \n>>")
+
+            if respuesta == "":
+                debug = False
+                continue
+            else:
+                continue
+    ## Fin sección debug
+
+        print("Presione enter para continuar")
+        clear()
+        print("1) Crear nota.")
+        print("2) Búsqueda.")
+        print("3) Mostrar notas(DEBUG).")
+        print("0) Salir del programa.")
+
+        opcion = int(input(">> ").strip())
+
+        if opcion == 1:
+            crear_nota()
+        elif opcion == 2:
+            buscar_notas(input("\n Ingrese palabra a buscar. \n>> ").strip())
+        elif opcion == 3:
+            mostrar_notas()
+        elif opcion == 0:
+            break
+        else:
+            print("Error. Ingrese un número (0 incluído)")
+            cuenta_regresiva()
+except(ValueError):
+    print("Error, ingrese un numero entero.")
+    cuenta_regresiva_dinamica()
 
 # Próximanente
