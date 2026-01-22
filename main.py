@@ -1,3 +1,5 @@
+import curses
+import keyboard # Para registrar combinaciones de teclas (opciones)
 from db import ejecutar_sql, leer_sql
 from utilidades import clear, separador, cuenta_regresiva, cuenta_regresiva_dinamica
 
@@ -57,6 +59,7 @@ def main():
         SELECT 1 FROM categorias WHERE nombre = 'GENERAL')
     """)
 
+# Funciones varias
 
 ####################################
 ##### Funcion para obtener ids #####
@@ -80,6 +83,55 @@ def obtener_id_categoria_general():
 
     return tuplas[0][0]
 
+
+
+# Funciones primarias
+
+##############################
+# Función de menu principal. #
+##############################
+
+
+def menu_opciones():
+
+    print(separador(longitud()))
+    
+    print(" CTRL + | O : Guardar | X: Descartar | 1 : Crear nota | 2 : Buscar nota | 3: Mostrar notas")
+
+    # Opciones del menú
+    
+    # Crear nota
+    if keyboard.is_pressed('ctrl+1') and not en_ejecucion:
+        crear_nota()
+    
+    # Buscar por palabra
+    elif keyboard.is_pressed('ctrl+2') and not en_ejecucion:
+            buscar_notas()
+
+    # Mostrar lista de notas
+    elif keyboard.is_pressed('ctrl+3') and not en_ejecucion: # Mostrar todas las notas (Desde la última hasta la primera) (Interactivo? Como un menu de selección
+            mostrar_notas() # Muestra todas las notas sin ninguna magia
+    # Borrar nota
+    # elif keyboard.is_pressed('ctrl+4')
+
+    # Guardado
+    elif keyboard.is_pressed('ctrl+o'):
+                
+        # Guardar nota
+        respuesta = input("Desea guardar la nota? (y/n)\n>> ").strip.upper
+        if respuesta == "Y":
+            print("debug")
+
+    
+    # Salida
+    elif keyboard.is_pressed('ctrl+x'):
+        respuesta = input("Desea salir del programa? (y/n)\n >> ")
+        if respuesta == "Y":
+            print("debug")
+
+
+
+    # elif keyboard.is_pressed('ctrl+ ') # Modificar nota (Quizas no se necesite)
 
 ###########################################
 # Funcion general para agregar categorías #
@@ -112,8 +164,8 @@ def agregar_categoria(tipo):
             if respuesta == "N":
                 continue # Vuelve a pedir una categoria.
             else: # Imprime un mensaje, hace una espera visual de tres segundos y vuelve pedir una categoria.
-		clear()
-                print("Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
+                clear()
+                print("Error. Por favor. Ingrese 'y' para sí o 'n' para no. (Sin las comillas)")
                 cuenta_regresiva() # Pausa 3 segundos antes de volver a borrar la pantalla.
                 continue
 
@@ -132,6 +184,7 @@ def agregar_titulo():
     # En python, hay "sinonimos" de "False": "" , 0 , NONE , () , [] , []
     # Por ende, si el usuario ingresa algo, ese algo se guarda en la variable,
     # y, si no ingresa nada, pasa a valer el próximo valor verdadero: "Sin título"
+
     titulo = input(">> ").strip() or "Sin título"
     return titulo
 
@@ -142,97 +195,10 @@ def agregar_titulo():
 def agregar_contenido_del_texto():
 
     clear()
-    print("# Nota:"\n)
+    print("# Nota:\n")
 
     contenido = input("").strip() or "Sin contenido"
     return contenido
-
-####################################
-# Función para crear el texto/nota #
-####################################
-def crear_nota():
-
-    # Comienza pidiendo el contenido del texto, luego el título, la subcategoría y la categoría.
-    contenido = agregar_contenido_del_texto()
-    titulo = agregar_titulo()
-
-    nombre_subcategoria = agregar_categoria(0) # 0 = key de subcategoria
-    nombre_categoria = agregar_categoria(1)    # 1 = key de categoria
-
-    # Inserción de subcategoría
-
-    if nombre_subcategoria == "GENERAL" :
-        subcategoria_id = obtener_id_subcategoria_general()
-    else:
-        # Inserto
-        ejecutar_sql(
-            "INSERT INTO subcategorias (nombre) VALUES (?)",
-            (nombre_subcategoria, )
-        )
-
-        subcategoria_id = leer_sql("SELECT id FROM subcategorias WHERE nombre = ?", (nombre_subcategoria,))[0][0]
-
-   # Inserción de categoría
-
-    if nombre_categoria == "GENERAL" :
-        categoria_id = obtener_id_categoria_general()
-    else:
-        # Inserto la nueva categoría si no existe y capturo su id
-        ejecutar_sql(
-            "INSERT INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
-            (nombre_categoria, subcategoria_id)
-        )
-        categoria_id = leer_sql("SELECT id FROM categorias WHERE nombre = ?", (nombre_categoria))[0][0]
-
-    # Inserto la nota en la tabla textos
-    ejecutar_sql(
-        "INSERT INTO textos (titulo, contenido, categoria_id) VALUES (?, ?, ?)",
-        (titulo, contenido, categoria_id)
-    )
-    clear()
-    print("Nota creada con éxito.")
-    cuenta_regresiva(2)
-
-############################################################################
-# Funcion para buscar notas por coincidencia parcial en titulo y contenido #
-############################################################################
-
-def buscar_notas(palabra):
-    # Agrega % al inicio y al final para coincidencia parcial
-    filtro = f"%{palabra}%"
-
-    notas = leer_sql("""
-        SELECT textos.titulo, textos.contenido, categorias.nombre AS categoria,
-        subcategorias.nombre AS subcategoria
-
-        FROM textos
-        
-        JOIN categorias ON textos.categoria_id = categorias.id
-        JOIN subcategorias ON categorias.subcategoria_id = subcategorias.id
-
-        -- Busqueda por coincidencia parcial
-
-        WHERE textos.titulo LIKE ? COLLATE NOCASE OR textos.contenido LIKE ?
-        ORDER BY textos.id
-    """, (filtro, filtro))
-
-    if not notas:
-        print(f"No se encontraron notas con '{palabra}'. intente con otra palabra.")
-        cuenta_regresiva()
-        return
-
-    for nota in notas:
-        titulo, contenido, categoria, subcategoria = nota
-        separador()
-        print(f"Título: {titulo}")
-        print(f"Categoría: {categoria}")
-        print(f"Subcategoría: {subcategoria}")
-        print(f"Contenido: {contenido}")
-        
-        separador()
-        print()
-
-
 
 ########################################
 # Funcion para mostrar todas las notas #
@@ -275,7 +241,111 @@ def mostrar_notas():
             separador()
 
 
+############################################################################
+# Funcion para buscar notas por coincidencia parcial en titulo y contenido #
+############################################################################
+
+def buscar_notas(palabra):
+
+    # La función se está ejecutando
+    en_ejecucion = True
+
+    # Agrega % al inicio y al final para coincidencia parcial
+    filtro = f"%{palabra}%"
+
+    notas = leer_sql("""
+        SELECT textos.titulo, textos.contenido, categorias.nombre AS categoria,
+        subcategorias.nombre AS subcategoria
+
+        FROM textos
+        
+        JOIN categorias ON textos.categoria_id = categorias.id
+        JOIN subcategorias ON categorias.subcategoria_id = subcategorias.id
+
+        -- Busqueda por coincidencia parcial
+
+        WHERE textos.titulo LIKE ? COLLATE NOCASE OR textos.contenido LIKE ?
+        ORDER BY textos.id
+    """, (filtro, filtro))
+
+    if not notas:
+        print(f"No se encontraron notas con '{palabra}'. intente con otra palabra.")
+        cuenta_regresiva()
+        return
+
+    for nota in notas:
+        titulo, contenido, categoria, subcategoria = nota
+        separador()
+        print(f"Título: {titulo}")
+        print(f"Categoría: {categoria}")
+        print(f"Subcategoría: {subcategoria}")
+        print(f"Contenido: {contenido}")
+        
+        separador()
+        print()
+
+####################################
+# Función para crear el texto/nota #
+####################################
+def crear_nota(nota = ""):
+
+    en_ejecucion = True # La función de creación de nota se está ejecutando actualmente
+
+    # Comienza pidiendo el contenido del texto, luego el título, la subcategoría y la categoría.
+    contenido = agregar_contenido_del_texto()
+    titulo = agregar_titulo()
+
+    nombre_subcategoria = agregar_categoria(0) # 0 = key de subcategoria
+    nombre_categoria = agregar_categoria(1)    # 1 = key de categoria
+
+    # Inserción de subcategoría
+
+    if nombre_subcategoria == "GENERAL" :
+        subcategoria_id = obtener_id_subcategoria_general()
+    else:
+        # Inserto
+        ejecutar_sql(
+            "INSERT INTO subcategorias (nombre) VALUES (?)",
+            (nombre_subcategoria, )
+        )
+
+        subcategoria_id = leer_sql("SELECT id FROM subcategorias WHERE nombre = ?", (nombre_subcategoria,))[0][0]
+
+   # Inserción de categoría
+
+    if nombre_categoria == "GENERAL" :
+        categoria_id = obtener_id_categoria_general()
+    else:
+        # Inserto la nueva categoría si no existe y capturo su id
+        ejecutar_sql(
+            "INSERT INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
+            (nombre_categoria, subcategoria_id)
+        )
+        categoria_id = leer_sql("SELECT id FROM categorias WHERE nombre = ?", (nombre_categoria))[0][0]
+
+    # Inserto la nota en la tabla textos
+    ejecutar_sql(
+        "INSERT INTO textos (titulo, contenido, categoria_id) VALUES (?, ?, ?)",
+        (titulo, contenido, categoria_id)
+    )
+    clear()
+    print("Nota creada con éxito.")
+    cuenta_regresiva(2)
+
+
+#####################
+# Ventana principal #
+#####################
+
+#######################
+# Ventana de opciones #
+#######################
+
+#####################################################################################################################################
+#####################################################################################################################################
+
 # Bucle del programa
+
 ## Inicialización de la base de datos y carga de la categoría y subcategoría "General".
 main()
 debug = True
