@@ -1,5 +1,3 @@
-import curses
-import keyboard # Para registrar combinaciones de teclas (opciones)
 from db import ejecutar_sql, leer_sql
 from utilidades import clear, separador, cuenta_regresiva, cuenta_regresiva_dinamica
 
@@ -11,9 +9,8 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS subcategorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL DEFAULT "GENERAL"
-            CHECK (length(nombre) <= 20)
-            )
+        nombre TEXT NOT NULL UNIQUE CHECK (length(nombre) <= 20)
+        )
     """)
 
 # Creación de tabla categorías
@@ -21,8 +18,7 @@ def main():
     ejecutar_sql("""
     CREATE TABLE IF NOT EXISTS categorias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL DEFAULT "GENERAL"
-            CHECK (length(nombre) <= 20),
+        nombre TEXT NOT NULL UNIQUE CHECK (length(nombre) <= 20),
         subcategoria_id INTEGER NOT NULL,
         FOREIGN KEY (subcategoria_id) REFERENCES subcategorias(id)
         )
@@ -33,8 +29,7 @@ def main():
     ejecutar_sql("""
         CREATE TABLE IF NOT EXISTS textos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT NOT NULL
-            CHECK (length(titulo) <= 50),
+        titulo TEXT NOT NULL CHECK (length(titulo) <= 50),
         contenido TEXT NOT NULL,
         categoria_id INTEGER NOT NULL,
         FOREIGN KEY (categoria_id) REFERENCES categorias(id)
@@ -44,20 +39,14 @@ def main():
 # Creación de valores por defecto.
 ## Subcategoría "General"
     ejecutar_sql("""
-    INSERT INTO subcategorias (nombre)
-    SELECT 'GENERAL'
-    WHERE NOT EXISTS (
-        SELECT 1 FROM subcategorias WHERE nombre = 'GENERAL')
-    """
+        INSERT OR IGNORE INTO subcategorias (nombre) VALUES ('GENERAL');
+    """ 
     )
 ## Categoría "General"
+
     ejecutar_sql("""
-    INSERT INTO categorias (nombre, subcategoria_id)
-    SELECT 'GENERAL', id
-    FROM subcategorias
-    WHERE NOT EXISTS (
-        SELECT 1 FROM categorias WHERE nombre = 'GENERAL')
-    """)
+        INSERT OR IGNORE INTO categorias (nombre, subcategoria_id) VALUES ('GENERAL', ?);
+    """, (obtener_id_subcategoria_general(), ))
 
 # Funciones varias
 
@@ -83,55 +72,7 @@ def obtener_id_categoria_general():
 
     return tuplas[0][0]
 
-
-
 # Funciones primarias
-
-##############################
-# Función de menu principal. #
-##############################
-
-
-def menu_opciones():
-
-    print(separador(longitud()))
-    
-    print(" CTRL + | O : Guardar | X: Descartar | 1 : Crear nota | 2 : Buscar nota | 3: Mostrar notas")
-
-    # Opciones del menú
-    
-    # Crear nota
-    if keyboard.is_pressed('ctrl+1') and not en_ejecucion:
-        crear_nota()
-    
-    # Buscar por palabra
-    elif keyboard.is_pressed('ctrl+2') and not en_ejecucion:
-            buscar_notas()
-
-    # Mostrar lista de notas
-    elif keyboard.is_pressed('ctrl+3') and not en_ejecucion: # Mostrar todas las notas (Desde la última hasta la primera) (Interactivo? Como un menu de selección
-            mostrar_notas() # Muestra todas las notas sin ninguna magia
-    # Borrar nota
-    # elif keyboard.is_pressed('ctrl+4')
-
-    # Guardado
-    elif keyboard.is_pressed('ctrl+o'):
-                
-        # Guardar nota
-        respuesta = input("Desea guardar la nota? (y/n)\n>> ").strip.upper
-        if respuesta == "Y":
-            print("debug")
-
-    
-    # Salida
-    elif keyboard.is_pressed('ctrl+x'):
-        respuesta = input("Desea salir del programa? (y/n)\n >> ")
-        if respuesta == "Y":
-            print("debug")
-
-
-
-    # elif keyboard.is_pressed('ctrl+ ') # Modificar nota (Quizas no se necesite)
 
 ###########################################
 # Funcion general para agregar categorías #
@@ -149,7 +90,7 @@ def agregar_categoria(tipo):
         print("# Presiona enter para categoría por defecto.")
 
         # Ingresa el nombre de la categoría.
-        item = input(">> ").strip().upper # .strip() sanitiza los espacios al principio y al final del input. Se recibe el string en mayúsculas para normalizar nombres de categorías.
+        item = input(">> ").strip().upper() # .strip() sanitiza los espacios al principio y al final del input. Se recibe el string en mayúsculas para normalizar nombres de categorías.
 
         # Si el usuario no ingresa nada, devuelve "General".
         if not item: # Porque un string vacío es "sinónimo" de False.
@@ -288,9 +229,6 @@ def buscar_notas(palabra):
 # Función para crear el texto/nota #
 ####################################
 def crear_nota(nota = ""):
-
-    en_ejecucion = True # La función de creación de nota se está ejecutando actualmente
-
     # Comienza pidiendo el contenido del texto, luego el título, la subcategoría y la categoría.
     contenido = agregar_contenido_del_texto()
     titulo = agregar_titulo()
@@ -303,9 +241,9 @@ def crear_nota(nota = ""):
     if nombre_subcategoria == "GENERAL" :
         subcategoria_id = obtener_id_subcategoria_general()
     else:
-        # Inserto
+        # Inserto la nueva categoría si no existe
         ejecutar_sql(
-            "INSERT INTO subcategorias (nombre) VALUES (?)",
+            "INSERT OR IGNORE INTO subcategorias (nombre) VALUES (?)",
             (nombre_subcategoria, )
         )
 
@@ -318,10 +256,10 @@ def crear_nota(nota = ""):
     else:
         # Inserto la nueva categoría si no existe y capturo su id
         ejecutar_sql(
-            "INSERT INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
+            "INSERT OR IGNORE INTO categorias (nombre, subcategoria_id) VALUES (?, ?)",
             (nombre_categoria, subcategoria_id)
         )
-        categoria_id = leer_sql("SELECT id FROM categorias WHERE nombre = ?", (nombre_categoria))[0][0]
+        categoria_id = leer_sql("SELECT id FROM categorias WHERE nombre = ?", (nombre_categoria,))[0][0]
 
     # Inserto la nota en la tabla textos
     ejecutar_sql(
@@ -333,47 +271,33 @@ def crear_nota(nota = ""):
     cuenta_regresiva(2)
 
 
-#####################
-# Ventana principal #
-#####################
+# Modo debug
 
-#######################
-# Ventana de opciones #
-#######################
-
-#####################################################################################################################################
-#####################################################################################################################################
-
-# Bucle del programa
-
-## Inicialización de la base de datos y carga de la categoría y subcategoría "General".
-main()
-debug = True
-# Menú interactivo
-try:
-    while True:
-    ## Sección debug
+def debug():
+    corriendo = True
+    while corriendo:
         print("Datos en textos:")
         print(leer_sql("SELECT * FROM textos"))
         print()
         print("Datos en categorias:")
         print(leer_sql("SELECT * FROM categorias"))
+        print("Datos en subcategorías:")
+        print(leer_sql("SELECT * FROM subcategorias"))
+        respuesta = input("1 para continuar, 0 para volver a mostrar.").strip()
+        if respuesta == "0":
+            continue
+        else:
+            return False
+            
+# Menu principal
 
-        while debug:
-            respuesta = input("Presione enter para continuar. \n>>")
-
-            if respuesta == "":
-                debug = False
-                continue
-            else:
-                continue
-    ## Fin sección debug
-
-        print("Presione enter para continuar")
+def menuprincipal():
+    while True:
         clear()
         print("1) Crear nota.")
         print("2) Búsqueda.")
-        print("3) Mostrar notas(DEBUG).")
+        print("3) Mostrar notas.")
+        print("4) Modo debug")
         print("0) Salir del programa.")
 
         opcion = int(input(">> ").strip())
@@ -384,14 +308,34 @@ try:
             buscar_notas(input("\n Ingrese palabra a buscar. \n>> ").strip())
         elif opcion == 3:
             mostrar_notas()
+        elif opcion == 4:
+            debug()
         elif opcion == 0:
-            break
+            return False
         else:
             print("Error. Ingrese una opción válida.")
             cuenta_regresiva()
 
+#####################################################################################################################################
+#####################################################################################################################################
+
+# Bucle del programa
+
+try:
+    ## Inicialización de la base de datos y carga de la categoría y subcategoría "General".
+    main()
+    
+    ## Aplicación ##
+    menuprincipal()
+    ## Fin aplicación ##
+
 except(ValueError):
-    print("Error, ingrese un numero entero.")
-    cuenta_regresiva_dinamica()
+    clear()
+    print("Error, ingrese una opción válida.")
+    cuenta_regresiva_dinamica(2)
+except Exception as e:
+    clear()
+    print(f"Error: {e}")
+    cuenta_regresiva(5)
 
 # Próximanente
